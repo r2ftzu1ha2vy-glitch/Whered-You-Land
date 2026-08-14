@@ -152,12 +152,14 @@
     height:100%;
     cursor:crosshair;
     display:block;
+    touch-action:none;
   }
 
   #worldSvg .country{
     fill:var(--sand);
     stroke:var(--sky-top);
     stroke-width:0.6;
+    vector-effect:non-scaling-stroke;
     transition:fill 0.15s ease;
   }
   #worldSvg .country:hover{
@@ -165,6 +167,52 @@
   }
   #worldSvg .ocean{
     fill:url(#oceanGrad);
+  }
+
+  #zoomGroup{
+    will-change:transform;
+  }
+
+  /* ---------- ZOOM CONTROLS ---------- */
+  #zoomControls{
+    position:absolute;
+    right:18px;
+    bottom:26px;
+    z-index:20;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  #zoomControls button{
+    width:38px;
+    height:38px;
+    border-radius:10px;
+    border:1px solid rgba(232,213,183,0.25);
+    background:rgba(15,23,32,0.65);
+    color:var(--sand);
+    font-size:18px;
+    font-weight:800;
+    line-height:1;
+    cursor:pointer;
+    backdrop-filter:blur(6px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background 0.12s ease, opacity 0.12s ease, transform 0.12s ease;
+  }
+  #zoomControls button:hover:not(:disabled){
+    background:rgba(15,23,32,0.85);
+    transform:translateY(-1px);
+  }
+  #zoomControls button:active:not(:disabled){
+    transform:translateY(0) scale(0.95);
+  }
+  #zoomControls button:disabled{
+    opacity:0.3;
+    cursor:not-allowed;
+  }
+  #zoomControls #zoomResetBtn{
+    font-size:14px;
   }
 
   .stars{
@@ -521,6 +569,7 @@
             <stop offset="100%" stop-color="#3d5470"/>
           </linearGradient>
         </defs>
+        <g id="zoomGroup">
         <rect class="ocean" x="0" y="0" width="1000" height="500"/>
         <g id="countryGroup" fill="var(--sand)" stroke="var(--sky-top)" stroke-width="0.6">
           <path class="country" d="M670.0,151.0 L675.0,151.7 L675.5,150.4 L679.3,149.1 L679.9,146.9 L682.6,145.4 L689.3,147.2 L692.2,146.8 L693.1,145.5 L694.8,145.6 L696.7,143.1 L698.2,143.7 L698.5,147.0 L699.6,147.9 L703.5,145.8 L708.8,146.9 L699.6,148.6 L698.0,149.8 L698.9,152.4 L696.9,155.6 L694.3,155.5 L695.3,157.3 L692.4,159.7 L692.5,161.4 L685.9,163.0 L684.4,164.6 L684.3,167.0 L678.2,168.5 L673.7,168.6 L669.1,167.1 L671.6,164.6 L671.4,162.8 L669.3,162.4 L668.2,158.4 L669.3,156.9 L668.1,156.5 L670.0,151.0Z" data-name="Afghanistan"/>
@@ -704,8 +753,15 @@
 <path class="country" d="M591.0,275.6 L593.0,279.2 L592.0,282.2 L592.5,284.5 L590.8,288.1 L592.3,288.8 L583.8,291.1 L584.1,293.1 L580.4,294.6 L575.1,299.8 L568.6,298.2 L564.5,298.7 L560.8,294.7 L560.9,285.8 L566.7,285.9 L566.4,280.4 L570.6,281.5 L571.5,282.7 L575.5,282.2 L580.4,286.8 L582.5,286.8 L582.3,283.8 L581.5,284.3 L578.8,282.8 L579.8,273.7 L584.3,272.9 L591.0,275.6Z" data-name="Zambia"/>
 <path class="country" d="M586.6,311.8 L581.8,311.4 L577.8,309.7 L577.0,306.9 L572.7,303.6 L570.2,299.3 L575.1,299.8 L580.4,294.6 L584.1,293.1 L584.3,294.1 L586.6,294.1 L591.2,296.4 L590.7,306.4 L586.6,311.8Z" data-name="Zimbabwe"/>
         </g>
+        </g>
       </svg>
       <svg id="flightPath" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div id="zoomControls">
+      <button id="zoomInBtn" type="button" aria-label="Zoom in">+</button>
+      <button id="zoomOutBtn" type="button" aria-label="Zoom out">&minus;</button>
+      <button id="zoomResetBtn" type="button" aria-label="Reset zoom">&#8634;</button>
     </div>
 
     <div class="hint-text" id="hintText">Click anywhere on the map to drop your pin.</div>
@@ -746,74 +802,74 @@
 <script>
 //COUNTRY_DATA_PLACEHOLDER
 const LOCATIONS = [
-  {n:'Eiffel Tower, Paris',lat:48.8584,lng:2.2945},
-  {n:'Statue of Liberty, New York',lat:40.6892,lng:-74.0445},
-  {n:'Christ the Redeemer, Rio de Janeiro',lat:-22.9519,lng:-43.2105},
+  {n:'Eiffel Tower',lat:48.8584,lng:2.2945},
+  {n:'Statue of Liberty',lat:40.6892,lng:-74.0445},
+  {n:'Christ the Redeemer',lat:-22.9519,lng:-43.2105},
   {n:'Great Pyramid of Giza',lat:29.9792,lng:31.1342},
   {n:'Sydney Opera House',lat:-33.8568,lng:151.2153},
-  {n:'Taj Mahal, Agra',lat:27.1751,lng:78.0421},
-  {n:'Big Ben, London',lat:51.5007,lng:-0.1246},
-  {n:'Colosseum, Rome',lat:41.8902,lng:12.4922},
-  {n:'Machu Picchu, Peru',lat:-13.1631,lng:-72.545},
-  {n:'Golden Gate Bridge, San Francisco',lat:37.8199,lng:-122.4783},
-  {n:'Mount Fuji, Japan',lat:35.3606,lng:138.7274},
-  {n:'Petra, Jordan',lat:30.3285,lng:35.4444},
-  {n:'Burj Khalifa, Dubai',lat:25.1972,lng:55.2744},
-  {n:'Table Mountain, Cape Town',lat:-33.9628,lng:18.4098},
-  {n:'Angkor Wat, Cambodia',lat:13.4125,lng:103.867},
-  {n:'Neuschwanstein Castle, Germany',lat:47.5576,lng:10.7498},
-  {n:'Uluru, Australia',lat:-25.3444,lng:131.0369},
-  {n:'Chichen Itza, Mexico',lat:20.6843,lng:-88.5678},
-  {n:'Kremlin, Moscow',lat:55.752,lng:37.6175},
-  {n:'CN Tower, Toronto',lat:43.6426,lng:-79.3871},
-  {n:'Forbidden City, Beijing',lat:39.9163,lng:116.3972},
-  {n:'Santorini, Greece',lat:36.3932,lng:25.4615},
-  {n:'Victoria Falls, Zambia/Zimbabwe',lat:-17.9243,lng:25.8572},
-  {n:'Sagrada Familia, Barcelona',lat:41.4036,lng:2.1744},
-  {n:'Mount Kilimanjaro, Tanzania',lat:-3.0674,lng:37.3556},
+  {n:'Taj Mahal',lat:27.1751,lng:78.0421},
+  {n:'Big Ben',lat:51.5007,lng:-0.1246},
+  {n:'Colosseum',lat:41.8902,lng:12.4922},
+  {n:'Machu Picchu',lat:-13.1631,lng:-72.545},
+  {n:'Golden Gate Bridge',lat:37.8199,lng:-122.4783},
+  {n:'Mount Fuji',lat:35.3606,lng:138.7274},
+  {n:'Petra',lat:30.3285,lng:35.4444},
+  {n:'Burj Khalifa',lat:25.1972,lng:55.2744},
+  {n:'Table Mountain',lat:-33.9628,lng:18.4098},
+  {n:'Angkor Wat',lat:13.4125,lng:103.867},
+  {n:'Neuschwanstein Castle',lat:47.5576,lng:10.7498},
+  {n:'Uluru',lat:-25.3444,lng:131.0369},
+  {n:'Chichen Itza',lat:20.6843,lng:-88.5678},
+  {n:'Kremlin',lat:55.752,lng:37.6175},
+  {n:'CN Tower',lat:43.6426,lng:-79.3871},
+  {n:'Forbidden City',lat:39.9163,lng:116.3972},
+  {n:'Santorini',lat:36.3932,lng:25.4615},
+  {n:'Victoria Falls',lat:-17.9243,lng:25.8572},
+  {n:'Sagrada Familia',lat:41.4036,lng:2.1744},
+  {n:'Mount Kilimanjaro',lat:-3.0674,lng:37.3556},
   {n:'Niagara Falls',lat:43.0962,lng:-79.0377},
-  {n:'Hagia Sophia, Istanbul',lat:41.0086,lng:28.9802},
-  {n:'Stonehenge, England',lat:51.1789,lng:-1.8262},
-  {n:'Times Square, New York',lat:40.758,lng:-73.9855},
-  {n:'Red Square, Moscow',lat:55.7539,lng:37.6208},
-  {n:'Great Barrier Reef, Australia',lat:-18.2871,lng:147.6992},
-  {n:'Grand Canyon, Arizona',lat:36.1069,lng:-112.1129},
-  {n:'Leaning Tower of Pisa, Italy',lat:43.723,lng:10.3966},
-  {n:'Alhambra, Granada',lat:37.176,lng:-3.5881},
-  {n:'Mount Rushmore, South Dakota',lat:43.8791,lng:-103.4591},
-  {n:'Sahara Desert, Morocco',lat:31.0,lng:-4.0},
-  {n:'Iguazu Falls, Argentina/Brazil',lat:-25.6953,lng:-54.4367},
-  {n:'Banff National Park, Canada',lat:51.4968,lng:-115.9281},
-  {n:'Marina Bay Sands, Singapore',lat:1.2834,lng:103.8607},
-  {n:'Acropolis, Athens',lat:37.9715,lng:23.7267},
-  {n:'Reykjavik, Iceland',lat:64.1466,lng:-21.9426},
-  {n:'Cairo, Egypt',lat:30.0444,lng:31.2357},
-  {n:'Tokyo, Japan',lat:35.6762,lng:139.6503},
-  {n:'Nairobi, Kenya',lat:-1.2921,lng:36.8219},
-  {n:'Buenos Aires, Argentina',lat:-34.6037,lng:-58.3816},
-  {n:'Reykjanes Peninsula, Iceland',lat:63.88,lng:-22.7},
-  {n:'Wellington, New Zealand',lat:-41.2865,lng:174.7762},
-  {n:'Anchorage, Alaska',lat:61.2181,lng:-149.9003},
-  {n:'Ushuaia, Argentina',lat:-54.8019,lng:-68.303},
-  {n:'Death Valley, California',lat:36.5054,lng:-117.0794},
-  {n:'Serengeti, Tanzania',lat:-2.3333,lng:34.8333},
-  {n:'Bali, Indonesia',lat:-8.3405,lng:115.092},
-  {n:'Dubrovnik, Croatia',lat:42.6507,lng:18.0944},
-  {n:'Cape of Good Hope, South Africa',lat:-34.3568,lng:18.474},
-  {n:'Galapagos Islands, Ecuador',lat:-0.9538,lng:-90.9656},
-  {n:'Lofoten Islands, Norway',lat:68.15,lng:13.6},
-  {n:'Reykjavik Harbor, Iceland',lat:64.15,lng:-21.94},
+  {n:'Hagia Sophia',lat:41.0086,lng:28.9802},
+  {n:'Stonehenge',lat:51.1789,lng:-1.8262},
+  {n:'Times Square',lat:40.758,lng:-73.9855},
+  {n:'Red Square',lat:55.7539,lng:37.6208},
+  {n:'Great Barrier Reef',lat:-18.2871,lng:147.6992},
+  {n:'Grand Canyon',lat:36.1069,lng:-112.1129},
+  {n:'Leaning Tower of Pisa',lat:43.723,lng:10.3966},
+  {n:'Alhambra',lat:37.176,lng:-3.5881},
+  {n:'Mount Rushmore',lat:43.8791,lng:-103.4591},
+  {n:'Sahara Desert',lat:31.0,lng:-4.0},
+  {n:'Iguazu Falls',lat:-25.6953,lng:-54.4367},
+  {n:'Banff National Park',lat:51.4968,lng:-115.9281},
+  {n:'Marina Bay Sands',lat:1.2834,lng:103.8607},
+  {n:'Acropolis',lat:37.9715,lng:23.7267},
+  {n:'Reykjavik',lat:64.1466,lng:-21.9426},
+  {n:'Cairo',lat:30.0444,lng:31.2357},
+  {n:'Tokyo',lat:35.6762,lng:139.6503},
+  {n:'Nairobi',lat:-1.2921,lng:36.8219},
+  {n:'Buenos Aires',lat:-34.6037,lng:-58.3816},
+  {n:'Reykjanes Peninsula',lat:63.88,lng:-22.7},
+  {n:'Wellington',lat:-41.2865,lng:174.7762},
+  {n:'Anchorage',lat:61.2181,lng:-149.9003},
+  {n:'Ushuaia',lat:-54.8019,lng:-68.303},
+  {n:'Death Valley',lat:36.5054,lng:-117.0794},
+  {n:'Serengeti',lat:-2.3333,lng:34.8333},
+  {n:'Bali',lat:-8.3405,lng:115.092},
+  {n:'Dubrovnik',lat:42.6507,lng:18.0944},
+  {n:'Cape of Good Hope',lat:-34.3568,lng:18.474},
+  {n:'Galapagos Islands',lat:-0.9538,lng:-90.9656},
+  {n:'Lofoten Islands',lat:68.15,lng:13.6},
+  {n:'Reykjavik Harbor',lat:64.15,lng:-21.94},
   {n:'Antarctica Peninsula',lat:-63.2467,lng:-57.0},
-  {n:'Ha Long Bay, Vietnam',lat:20.9101,lng:107.1839},
-  {n:'Petronas Towers, Kuala Lumpur',lat:3.1579,lng:101.7116},
+  {n:'Ha Long Bay',lat:20.9101,lng:107.1839},
+  {n:'Petronas Towers',lat:3.1579,lng:101.7116},
   {n:'Moscow Kremlin',lat:55.752,lng:37.6175},
-  {n:'Seoul, South Korea',lat:37.5665,lng:126.978},
-  {n:'Mumbai, India',lat:19.076,lng:72.8777},
-  {n:'Cape Town, South Africa',lat:-33.9249,lng:18.4241},
-  {n:'Mexico City, Mexico',lat:19.4326,lng:-99.1332},
-  {n:'Lima, Peru',lat:-12.0464,lng:-77.0428},
-  {n:'Amsterdam, Netherlands',lat:52.3676,lng:4.9041},
-  {n:'Marrakesh, Morocco',lat:31.6295,lng:-7.9811}
+  {n:'Seoul',lat:37.5665,lng:126.978},
+  {n:'Mumbai',lat:19.076,lng:72.8777},
+  {n:'Cape Town',lat:-33.9249,lng:18.4241},
+  {n:'Mexico City',lat:19.4326,lng:-99.1332},
+  {n:'Lima',lat:-12.0464,lng:-77.0428},
+  {n:'Amsterdam',lat:52.3676,lng:4.9041},
+  {n:'Marrakesh',lat:31.6295,lng:-7.9811}
 ];
 (function(){
   "use strict";
@@ -822,7 +878,11 @@ const LOCATIONS = [
   const MAX_DIST_KM = 20037; // half of earth's circumference -> worst possible distance
   const svg = document.getElementById('worldSvg');
   const countryGroup = document.getElementById('countryGroup');
+  const zoomGroup = document.getElementById('zoomGroup');
   const mapWrap = document.getElementById('mapWrap');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
   const flightPathSvg = document.getElementById('flightPath');
   const targetNameEl = document.getElementById('targetName');
   const roundValueEl = document.getElementById('roundValue');
@@ -868,10 +928,68 @@ const LOCATIONS = [
     return svgP;
   }
 
+  function svgPointFromClientXY(clientX, clientY){
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const screenCTM = svg.getScreenCTM();
+    if(!screenCTM) return null;
+    return pt.matrixTransform(screenCTM.inverse());
+  }
+
   function svgXYToLngLat(x, y){
     const lng = (x / VB_W) * 360 - 180;
     const lat = 90 - (y / VB_H) * 180;
     return {lng, lat};
+  }
+
+  // ---------- zoom / pan ----------
+  const MIN_SCALE = 1, MAX_SCALE = 8;
+  let zoomScale = 1, zoomTx = 0, zoomTy = 0;
+
+  // "rendered" space = the worldSvg's own coordinate system (0..VB_W, 0..VB_H),
+  // i.e. what svgPointFromClientEvent returns, unaffected by the zoomGroup transform.
+  // "local" space = the original map-authoring coordinates that lngLatToSvgXY produces.
+  function renderedToLocal(rx, ry){
+    return { x: (rx - zoomTx) / zoomScale, y: (ry - zoomTy) / zoomScale };
+  }
+  function localToRendered(lx, ly){
+    return { x: zoomTx + zoomScale * lx, y: zoomTy + zoomScale * ly };
+  }
+
+  function clampPan(){
+    const minTx = VB_W * (1 - zoomScale);
+    const minTy = VB_H * (1 - zoomScale);
+    zoomTx = Math.min(0, Math.max(minTx, zoomTx));
+    zoomTy = Math.min(0, Math.max(minTy, zoomTy));
+  }
+
+  function applyZoomTransform(){
+    zoomGroup.setAttribute('transform', 'translate(' + zoomTx + ',' + zoomTy + ') scale(' + zoomScale + ')');
+  }
+
+  function updateZoomButtonStates(){
+    zoomOutBtn.disabled = zoomScale <= MIN_SCALE + 0.001;
+    zoomInBtn.disabled = zoomScale >= MAX_SCALE - 0.001;
+  }
+
+  // zoom so that the rendered-space point `renderedPt` stays fixed on screen
+  function zoomAt(renderedPt, factor){
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, zoomScale * factor));
+    const actualFactor = newScale / zoomScale;
+    zoomTx = renderedPt.x - actualFactor * (renderedPt.x - zoomTx);
+    zoomTy = renderedPt.y - actualFactor * (renderedPt.y - zoomTy);
+    zoomScale = newScale;
+    clampPan();
+    applyZoomTransform();
+    repositionAllMarkers();
+    updateZoomButtonStates();
+  }
+
+  function resetZoom(){
+    zoomScale = 1; zoomTx = 0; zoomTy = 0;
+    applyZoomTransform();
+    updateZoomButtonStates();
   }
 
   // ---------- haversine distance in km ----------
@@ -940,7 +1058,8 @@ const LOCATIONS = [
   }
 
   function placeMarker(el, lng, lat){
-    const {x, y} = lngLatToSvgXY(lng, lat);
+    const local = lngLatToSvgXY(lng, lat);
+    const {x, y} = localToRendered(local.x, local.y);
     const rect = getMapRenderRect();
     const pxLeft = rect.relLeft + (x / VB_W) * rect.renderW;
     const pxTop = rect.relTop + (y / VB_H) * rect.renderH;
@@ -971,8 +1090,10 @@ const LOCATIONS = [
   }
 
   function drawFlightPath(guessLng, guessLat, ansLng, ansLat){
-    const g = lngLatToSvgXY(guessLng, guessLat);
-    const a = lngLatToSvgXY(ansLng, ansLat);
+    const gLocal = lngLatToSvgXY(guessLng, guessLat);
+    const aLocal = lngLatToSvgXY(ansLng, ansLat);
+    const g = localToRendered(gLocal.x, gLocal.y);
+    const a = localToRendered(aLocal.x, aLocal.y);
     const ns = 'http://www.w3.org/2000/svg';
     const line = document.createElementNS(ns, 'line');
     line.setAttribute('x1', g.x);
@@ -1006,6 +1127,7 @@ const LOCATIONS = [
   function loadRound(){
     hasGuessed = false;
     guessLatLng = null;
+    resetZoom();
     clearMarkers();
     resultPanel.classList.remove('open');
     guessBtn.disabled = true;
@@ -1018,12 +1140,14 @@ const LOCATIONS = [
   }
 
   function onMapClick(evt){
+    if(panMoved){ panMoved = false; return; }
     if(hasGuessed) return;
     const svgP = svgPointFromClientEvent(evt);
     if(!svgP) return;
-    if(svgP.x < 0 || svgP.x > VB_W || svgP.y < 0 || svgP.y > VB_H) return;
+    const local = renderedToLocal(svgP.x, svgP.y);
+    if(local.x < 0 || local.x > VB_W || local.y < 0 || local.y > VB_H) return;
 
-    const {lng, lat} = svgXYToLngLat(svgP.x, svgP.y);
+    const {lng, lat} = svgXYToLngLat(local.x, local.y);
     guessLatLng = {lng, lat};
 
     if(guessMarkerEl) guessMarkerEl.remove();
@@ -1137,10 +1261,110 @@ const LOCATIONS = [
     document.getElementById('startBtn').addEventListener('click', startGame);
   }
 
+  // ---------- pan & pinch-zoom (pointer events) ----------
+  let panMoved = false;
+  const activePointers = new Map(); // pointerId -> {x, y}
+  let singlePointerStart = null; // {x, y, tx, ty}
+  let pinchStartDist = null;
+  let pinchStartScale = 1;
+  let pinchStartMid = null; // rendered-space midpoint
+  let pinchStartTx = 0, pinchStartTy = 0;
+
+  function pointerDist(p1, p2){
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  }
+
+  function onPointerDown(evt){
+    if(evt.button !== undefined && evt.button > 0) return;
+    try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
+    activePointers.set(evt.pointerId, {x: evt.clientX, y: evt.clientY});
+    if(activePointers.size === 1){
+      panMoved = false;
+      singlePointerStart = {x: evt.clientX, y: evt.clientY, tx: zoomTx, ty: zoomTy};
+    } else if(activePointers.size === 2){
+      const pts = [...activePointers.values()];
+      pinchStartDist = pointerDist(pts[0], pts[1]);
+      pinchStartScale = zoomScale;
+      pinchStartTx = zoomTx;
+      pinchStartTy = zoomTy;
+      const midClient = {x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2};
+      pinchStartMid = svgPointFromClientXY(midClient.x, midClient.y);
+      singlePointerStart = null;
+    }
+  }
+
+  function onPointerMove(evt){
+    if(!activePointers.has(evt.pointerId)) return;
+    activePointers.set(evt.pointerId, {x: evt.clientX, y: evt.clientY});
+
+    if(activePointers.size === 2 && pinchStartDist){
+      const pts = [...activePointers.values()];
+      const d = pointerDist(pts[0], pts[1]);
+      const factor = d / pinchStartDist;
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale * factor));
+      const actualFactor = newScale / pinchStartScale;
+      zoomTx = pinchStartMid.x - actualFactor * (pinchStartMid.x - pinchStartTx);
+      zoomTy = pinchStartMid.y - actualFactor * (pinchStartMid.y - pinchStartTy);
+      zoomScale = newScale;
+      clampPan();
+      applyZoomTransform();
+      repositionAllMarkers();
+      updateZoomButtonStates();
+      panMoved = true;
+    } else if(activePointers.size === 1 && singlePointerStart){
+      const dx = evt.clientX - singlePointerStart.x;
+      const dy = evt.clientY - singlePointerStart.y;
+      if(Math.abs(dx) + Math.abs(dy) > 4) panMoved = true;
+      if(zoomScale > MIN_SCALE){
+        const rect = getMapRenderRect();
+        if(rect.renderW > 0){
+          const unitsPerPixel = VB_W / rect.renderW;
+          zoomTx = singlePointerStart.tx + dx * unitsPerPixel;
+          zoomTy = singlePointerStart.ty + dy * unitsPerPixel;
+          clampPan();
+          applyZoomTransform();
+          repositionAllMarkers();
+        }
+      }
+    }
+  }
+
+  function onPointerUp(evt){
+    activePointers.delete(evt.pointerId);
+    if(activePointers.size < 2){ pinchStartDist = null; }
+    if(activePointers.size === 0){ singlePointerStart = null; }
+    else if(activePointers.size === 1){
+      const [remaining] = [...activePointers.entries()][0];
+      const p = activePointers.get(remaining);
+      singlePointerStart = {x: p.x, y: p.y, tx: zoomTx, ty: zoomTy};
+    }
+  }
+
+  function onWheel(evt){
+    evt.preventDefault();
+    const svgP = svgPointFromClientEvent(evt);
+    if(!svgP) return;
+    const factor = evt.deltaY < 0 ? 1.18 : 1/1.18;
+    zoomAt(svgP, factor);
+  }
+
   // ---------- wire up events ----------
   svg.addEventListener('click', onMapClick);
+  svg.addEventListener('pointerdown', onPointerDown);
+  svg.addEventListener('pointermove', onPointerMove);
+  svg.addEventListener('pointerup', onPointerUp);
+  svg.addEventListener('pointercancel', onPointerUp);
+  svg.addEventListener('wheel', onWheel, {passive:false});
+  zoomInBtn.addEventListener('click', ()=> zoomAt({x: VB_W/2, y: VB_H/2}, 1.5));
+  zoomOutBtn.addEventListener('click', ()=> zoomAt({x: VB_W/2, y: VB_H/2}, 1/1.5));
+  zoomResetBtn.addEventListener('click', ()=>{
+    resetZoom();
+    repositionAllMarkers();
+  });
   guessBtn.addEventListener('click', lockInGuess);
   nextBtn.addEventListener('click', goToNext);
+
+  updateZoomButtonStates();
 
   let resizeTimer = null;
   window.addEventListener('resize', ()=>{
