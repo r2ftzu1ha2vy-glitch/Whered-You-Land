@@ -154,6 +154,8 @@
     display:block;
     touch-action:none;
   }
+  #worldSvg.zoomed{ cursor:grab; }
+  #worldSvg.zoomed.dragging{ cursor:grabbing; }
 
   #worldSvg .country{
     fill:var(--sand);
@@ -213,6 +215,15 @@
   }
   #zoomControls #zoomResetBtn{
     font-size:14px;
+  }
+  #zoomControls .pan-hint{
+    font-size:9.5px;
+    letter-spacing:0.03em;
+    color:rgba(232,213,183,0.45);
+    text-align:center;
+    max-width:70px;
+    line-height:1.3;
+    margin-top:2px;
   }
 
   .stars{
@@ -481,6 +492,77 @@
     margin-bottom:30px;
   }
 
+  /* ---------- DIFFICULTY PICKER ---------- */
+  .diff-grid{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+  .diff-card{
+    flex:1 1 130px;
+    max-width:150px;
+    background:rgba(255,255,255,0.04);
+    border:1.5px solid rgba(232,213,183,0.22);
+    border-radius:14px;
+    padding:16px 12px;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+    text-align:center;
+  }
+  .diff-card:hover{
+    border-color:rgba(232,213,183,0.5);
+    transform:translateY(-2px);
+  }
+  .diff-card.selected{
+    border-color:var(--signal);
+    background:rgba(242,184,75,0.12);
+  }
+  .diff-card .diff-name{
+    font-size:13px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--sand);
+    margin-bottom:4px;
+  }
+  .diff-card .diff-desc{
+    font-size:11px;
+    color:rgba(232,213,183,0.55);
+    line-height:1.4;
+  }
+  .diff-card .diff-dots{
+    margin-bottom:8px;
+    display:flex;
+    gap:4px;
+    justify-content:center;
+  }
+  .diff-card .diff-dots span{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:rgba(232,213,183,0.2);
+  }
+  .diff-card .diff-dots span.on{ background:var(--signal); }
+  .diff-card[data-diff="easy"] .diff-dots span.on{ background:var(--good); }
+  .diff-card[data-diff="hard"] .diff-dots span.on{ background:var(--bad); }
+
+  /* ---------- TIMER ---------- */
+  .pill.timer .value{
+    font-variant-numeric:tabular-nums;
+  }
+  .pill.timer.low .value{
+    color:var(--bad);
+  }
+  @keyframes timerPulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.4; }
+  }
+  .pill.timer.low{
+    animation:timerPulse 1s ease-in-out infinite;
+  }
+
   .final-score{
     font-family:'Courier New',monospace;
     font-size:64px;
@@ -550,6 +632,7 @@
       <div class="sub">Drop a pin. Find out how close you came.</div>
     </div>
     <div class="hud">
+      <div class="pill timer" id="timerPill"><span class="label">Time</span><span class="value" id="timerValue">1:00</span></div>
       <div class="pill"><span class="label">Round</span><span class="value" id="roundValue">1 / 5</span></div>
       <div class="pill"><span class="label">Score</span><span class="value" id="scoreValue">0</span></div>
     </div>
@@ -762,6 +845,7 @@
       <button id="zoomInBtn" type="button" aria-label="Zoom in">+</button>
       <button id="zoomOutBtn" type="button" aria-label="Zoom out">&minus;</button>
       <button id="zoomResetBtn" type="button" aria-label="Reset zoom">&#8634;</button>
+      <div class="pan-hint">Drag to pan &middot; scroll to zoom</div>
     </div>
 
     <div class="hint-text" id="hintText">Click anywhere on the map to drop your pin.</div>
@@ -802,74 +886,74 @@
 <script>
 //COUNTRY_DATA_PLACEHOLDER
 const LOCATIONS = [
-  {n:'Eiffel Tower',lat:48.8584,lng:2.2945},
-  {n:'Statue of Liberty',lat:40.6892,lng:-74.0445},
-  {n:'Christ the Redeemer',lat:-22.9519,lng:-43.2105},
-  {n:'Great Pyramid of Giza',lat:29.9792,lng:31.1342},
-  {n:'Sydney Opera House',lat:-33.8568,lng:151.2153},
-  {n:'Taj Mahal',lat:27.1751,lng:78.0421},
-  {n:'Big Ben',lat:51.5007,lng:-0.1246},
-  {n:'Colosseum',lat:41.8902,lng:12.4922},
-  {n:'Machu Picchu',lat:-13.1631,lng:-72.545},
-  {n:'Golden Gate Bridge',lat:37.8199,lng:-122.4783},
-  {n:'Mount Fuji',lat:35.3606,lng:138.7274},
-  {n:'Petra',lat:30.3285,lng:35.4444},
-  {n:'Burj Khalifa',lat:25.1972,lng:55.2744},
-  {n:'Table Mountain',lat:-33.9628,lng:18.4098},
-  {n:'Angkor Wat',lat:13.4125,lng:103.867},
-  {n:'Neuschwanstein Castle',lat:47.5576,lng:10.7498},
-  {n:'Uluru',lat:-25.3444,lng:131.0369},
-  {n:'Chichen Itza',lat:20.6843,lng:-88.5678},
-  {n:'Kremlin',lat:55.752,lng:37.6175},
-  {n:'CN Tower',lat:43.6426,lng:-79.3871},
-  {n:'Forbidden City',lat:39.9163,lng:116.3972},
-  {n:'Santorini',lat:36.3932,lng:25.4615},
-  {n:'Victoria Falls',lat:-17.9243,lng:25.8572},
-  {n:'Sagrada Familia',lat:41.4036,lng:2.1744},
-  {n:'Mount Kilimanjaro',lat:-3.0674,lng:37.3556},
-  {n:'Niagara Falls',lat:43.0962,lng:-79.0377},
-  {n:'Hagia Sophia',lat:41.0086,lng:28.9802},
-  {n:'Stonehenge',lat:51.1789,lng:-1.8262},
-  {n:'Times Square',lat:40.758,lng:-73.9855},
-  {n:'Red Square',lat:55.7539,lng:37.6208},
-  {n:'Great Barrier Reef',lat:-18.2871,lng:147.6992},
-  {n:'Grand Canyon',lat:36.1069,lng:-112.1129},
-  {n:'Leaning Tower of Pisa',lat:43.723,lng:10.3966},
-  {n:'Alhambra',lat:37.176,lng:-3.5881},
-  {n:'Mount Rushmore',lat:43.8791,lng:-103.4591},
-  {n:'Sahara Desert',lat:31.0,lng:-4.0},
-  {n:'Iguazu Falls',lat:-25.6953,lng:-54.4367},
-  {n:'Banff National Park',lat:51.4968,lng:-115.9281},
-  {n:'Marina Bay Sands',lat:1.2834,lng:103.8607},
-  {n:'Acropolis',lat:37.9715,lng:23.7267},
-  {n:'Reykjavik',lat:64.1466,lng:-21.9426},
-  {n:'Cairo',lat:30.0444,lng:31.2357},
-  {n:'Tokyo',lat:35.6762,lng:139.6503},
-  {n:'Nairobi',lat:-1.2921,lng:36.8219},
-  {n:'Buenos Aires',lat:-34.6037,lng:-58.3816},
-  {n:'Reykjanes Peninsula',lat:63.88,lng:-22.7},
-  {n:'Wellington',lat:-41.2865,lng:174.7762},
-  {n:'Anchorage',lat:61.2181,lng:-149.9003},
-  {n:'Ushuaia',lat:-54.8019,lng:-68.303},
-  {n:'Death Valley',lat:36.5054,lng:-117.0794},
-  {n:'Serengeti',lat:-2.3333,lng:34.8333},
-  {n:'Bali',lat:-8.3405,lng:115.092},
-  {n:'Dubrovnik',lat:42.6507,lng:18.0944},
-  {n:'Cape of Good Hope',lat:-34.3568,lng:18.474},
-  {n:'Galapagos Islands',lat:-0.9538,lng:-90.9656},
-  {n:'Lofoten Islands',lat:68.15,lng:13.6},
-  {n:'Reykjavik Harbor',lat:64.15,lng:-21.94},
-  {n:'Antarctica Peninsula',lat:-63.2467,lng:-57.0},
-  {n:'Ha Long Bay',lat:20.9101,lng:107.1839},
-  {n:'Petronas Towers',lat:3.1579,lng:101.7116},
-  {n:'Moscow Kremlin',lat:55.752,lng:37.6175},
-  {n:'Seoul',lat:37.5665,lng:126.978},
-  {n:'Mumbai',lat:19.076,lng:72.8777},
-  {n:'Cape Town',lat:-33.9249,lng:18.4241},
-  {n:'Mexico City',lat:19.4326,lng:-99.1332},
-  {n:'Lima',lat:-12.0464,lng:-77.0428},
-  {n:'Amsterdam',lat:52.3676,lng:4.9041},
-  {n:'Marrakesh',lat:31.6295,lng:-7.9811}
+  {n:'Eiffel Tower',lat:48.8584,lng:2.2945,d:'easy'},
+  {n:'Statue of Liberty',lat:40.6892,lng:-74.0445,d:'easy'},
+  {n:'Christ the Redeemer',lat:-22.9519,lng:-43.2105,d:'easy'},
+  {n:'Great Pyramid of Giza',lat:29.9792,lng:31.1342,d:'easy'},
+  {n:'Sydney Opera House',lat:-33.8568,lng:151.2153,d:'easy'},
+  {n:'Taj Mahal',lat:27.1751,lng:78.0421,d:'easy'},
+  {n:'Big Ben',lat:51.5007,lng:-0.1246,d:'easy'},
+  {n:'Colosseum',lat:41.8902,lng:12.4922,d:'easy'},
+  {n:'Machu Picchu',lat:-13.1631,lng:-72.545,d:'easy'},
+  {n:'Golden Gate Bridge',lat:37.8199,lng:-122.4783,d:'easy'},
+  {n:'Mount Fuji',lat:35.3606,lng:138.7274,d:'easy'},
+  {n:'Burj Khalifa',lat:25.1972,lng:55.2744,d:'easy'},
+  {n:'Angkor Wat',lat:13.4125,lng:103.867,d:'easy'},
+  {n:'Kremlin',lat:55.752,lng:37.6175,d:'easy'},
+  {n:'CN Tower',lat:43.6426,lng:-79.3871,d:'easy'},
+  {n:'Forbidden City',lat:39.9163,lng:116.3972,d:'easy'},
+  {n:'Santorini',lat:36.3932,lng:25.4615,d:'easy'},
+  {n:'Victoria Falls',lat:-17.9243,lng:25.8572,d:'easy'},
+  {n:'Sagrada Familia',lat:41.4036,lng:2.1744,d:'easy'},
+  {n:'Niagara Falls',lat:43.0962,lng:-79.0377,d:'easy'},
+  {n:'Hagia Sophia',lat:41.0086,lng:28.9802,d:'easy'},
+  {n:'Stonehenge',lat:51.1789,lng:-1.8262,d:'easy'},
+  {n:'Times Square',lat:40.758,lng:-73.9855,d:'easy'},
+  {n:'Red Square',lat:55.7539,lng:37.6208,d:'easy'},
+  {n:'Great Barrier Reef',lat:-18.2871,lng:147.6992,d:'easy'},
+  {n:'Grand Canyon',lat:36.1069,lng:-112.1129,d:'easy'},
+  {n:'Leaning Tower of Pisa',lat:43.723,lng:10.3966,d:'easy'},
+  {n:'Mount Rushmore',lat:43.8791,lng:-103.4591,d:'easy'},
+  {n:'Acropolis',lat:37.9715,lng:23.7267,d:'easy'},
+  {n:'Cairo',lat:30.0444,lng:31.2357,d:'easy'},
+  {n:'Tokyo',lat:35.6762,lng:139.6503,d:'easy'},
+
+  {n:'Petra',lat:30.3285,lng:35.4444,d:'medium'},
+  {n:'Table Mountain',lat:-33.9628,lng:18.4098,d:'medium'},
+  {n:'Neuschwanstein Castle',lat:47.5576,lng:10.7498,d:'medium'},
+  {n:'Uluru',lat:-25.3444,lng:131.0369,d:'medium'},
+  {n:'Chichen Itza',lat:20.6843,lng:-88.5678,d:'medium'},
+  {n:'Mount Kilimanjaro',lat:-3.0674,lng:37.3556,d:'medium'},
+  {n:'Alhambra',lat:37.176,lng:-3.5881,d:'medium'},
+  {n:'Sahara Desert',lat:31.0,lng:-4.0,d:'medium'},
+  {n:'Iguazu Falls',lat:-25.6953,lng:-54.4367,d:'medium'},
+  {n:'Banff National Park',lat:51.4968,lng:-115.9281,d:'medium'},
+  {n:'Marina Bay Sands',lat:1.2834,lng:103.8607,d:'medium'},
+  {n:'Nairobi',lat:-1.2921,lng:36.8219,d:'medium'},
+  {n:'Buenos Aires',lat:-34.6037,lng:-58.3816,d:'medium'},
+  {n:'Wellington',lat:-41.2865,lng:174.7762,d:'medium'},
+  {n:'Death Valley',lat:36.5054,lng:-117.0794,d:'medium'},
+  {n:'Serengeti',lat:-2.3333,lng:34.8333,d:'medium'},
+  {n:'Bali',lat:-8.3405,lng:115.092,d:'medium'},
+  {n:'Dubrovnik',lat:42.6507,lng:18.0944,d:'medium'},
+  {n:'Cape of Good Hope',lat:-34.3568,lng:18.474,d:'medium'},
+  {n:'Ha Long Bay',lat:20.9101,lng:107.1839,d:'medium'},
+  {n:'Petronas Towers',lat:3.1579,lng:101.7116,d:'medium'},
+  {n:'Seoul',lat:37.5665,lng:126.978,d:'medium'},
+  {n:'Mumbai',lat:19.076,lng:72.8777,d:'medium'},
+  {n:'Cape Town',lat:-33.9249,lng:18.4241,d:'medium'},
+  {n:'Mexico City',lat:19.4326,lng:-99.1332,d:'medium'},
+  {n:'Lima',lat:-12.0464,lng:-77.0428,d:'medium'},
+  {n:'Amsterdam',lat:52.3676,lng:4.9041,d:'medium'},
+  {n:'Marrakesh',lat:31.6295,lng:-7.9811,d:'medium'},
+
+  {n:'Reykjavik',lat:64.1466,lng:-21.9426,d:'hard'},
+  {n:'Reykjanes Peninsula',lat:63.88,lng:-22.7,d:'hard'},
+  {n:'Anchorage',lat:61.2181,lng:-149.9003,d:'hard'},
+  {n:'Ushuaia',lat:-54.8019,lng:-68.303,d:'hard'},
+  {n:'Galapagos Islands',lat:-0.9538,lng:-90.9656,d:'hard'},
+  {n:'Lofoten Islands',lat:68.15,lng:13.6,d:'hard'},
+  {n:'Antarctica Peninsula',lat:-63.2467,lng:-57.0,d:'hard'}
 ];
 (function(){
   "use strict";
@@ -897,6 +981,8 @@ const LOCATIONS = [
   const hintText = document.getElementById('hintText');
   const overlay = document.getElementById('overlay');
   const overlayCard = document.getElementById('overlayCard');
+  const timerPill = document.getElementById('timerPill');
+  const timerValueEl = document.getElementById('timerValue');
 
   let roundLocations = [];
   let currentRoundIndex = 0;
@@ -906,6 +992,16 @@ const LOCATIONS = [
   let guessMarkerEl = null;
   let answerMarkerEl = null;
   let hasGuessed = false;
+  let selectedDifficulty = 'easy';
+  let timerInterval = null;
+  let timeLeft = 60;
+  const ROUND_SECONDS = 60;
+
+  const DIFFICULTIES = [
+    {key:'easy', name:'Easy', desc:'Famous landmarks everyone knows', dots:1},
+    {key:'medium', name:'Medium', desc:'World cities and cool spots', dots:2},
+    {key:'hard', name:'Hard', desc:'Remote places off the beaten path', dots:3}
+  ];
 
   // ---------- projection helpers (equirectangular, matches how the SVG paths were built) ----------
   const VB_W = 1000, VB_H = 500;
@@ -966,6 +1062,7 @@ const LOCATIONS = [
 
   function applyZoomTransform(){
     zoomGroup.setAttribute('transform', 'translate(' + zoomTx + ',' + zoomTy + ') scale(' + zoomScale + ')');
+    svg.classList.toggle('zoomed', zoomScale > MIN_SCALE + 0.001);
   }
 
   function updateZoomButtonStates(){
@@ -1115,13 +1212,48 @@ const LOCATIONS = [
     return a;
   }
 
-  function startGame(){
-    roundLocations = shuffle(LOCATIONS).slice(0, TOTAL_ROUNDS);
+  function startGame(difficulty){
+    selectedDifficulty = difficulty || selectedDifficulty;
+    const pool = LOCATIONS.filter(l => l.d === selectedDifficulty);
+    roundLocations = shuffle(pool).slice(0, TOTAL_ROUNDS);
     currentRoundIndex = 0;
     totalScore = 0;
     roundResults = [];
     overlay.classList.add('hidden');
     loadRound();
+  }
+
+  function stopTimer(){
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  function formatTime(sec){
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function startTimer(){
+    stopTimer();
+    timeLeft = ROUND_SECONDS;
+    timerValueEl.textContent = formatTime(timeLeft);
+    timerPill.classList.remove('low');
+    timerInterval = setInterval(()=>{
+      timeLeft--;
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        timerValueEl.textContent = formatTime(0);
+        stopTimer();
+        if(!hasGuessed){
+          // time's up: auto-lock whatever guess is on the board, or a center-map default
+          if(!guessLatLng){ guessLatLng = {lng: 0, lat: 0}; }
+          lockInGuess();
+        }
+        return;
+      }
+      timerValueEl.textContent = formatTime(timeLeft);
+      if(timeLeft <= 10) timerPill.classList.add('low');
+    }, 1000);
   }
 
   function loadRound(){
@@ -1137,6 +1269,7 @@ const LOCATIONS = [
     targetNameEl.textContent = loc.n;
     roundValueEl.textContent = (currentRoundIndex+1) + ' / ' + TOTAL_ROUNDS;
     scoreValueEl.textContent = totalScore;
+    startTimer();
   }
 
   function onMapClick(evt){
@@ -1163,6 +1296,7 @@ const LOCATIONS = [
     if(!guessLatLng || hasGuessed) return;
     hasGuessed = true;
     guessBtn.disabled = true;
+    stopTimer();
 
     const loc = roundLocations[currentRoundIndex];
     const distKm = haversineKm(guessLatLng.lat, guessLatLng.lng, loc.lat, loc.lng);
@@ -1237,7 +1371,7 @@ const LOCATIONS = [
       <button class="btn btn-primary" id="playAgainBtn">Play again</button>
     `;
     overlay.classList.remove('hidden');
-    document.getElementById('playAgainBtn').addEventListener('click', startGame);
+    document.getElementById('playAgainBtn').addEventListener('click', showStartScreen);
   }
 
   function escapeHtml(str){
@@ -1247,6 +1381,21 @@ const LOCATIONS = [
   }
 
   function showStartScreen(){
+    stopTimer();
+    let pickedDiff = selectedDifficulty;
+    const diffCardsHtml = DIFFICULTIES.map(d => {
+      const dotsHtml = Array.from({length:3}).map((_,i)=>
+        `<span class="${i < d.dots ? 'on' : ''}"></span>`
+      ).join('');
+      return `
+        <div class="diff-card${d.key === pickedDiff ? ' selected' : ''}" data-diff="${d.key}">
+          <div class="diff-dots">${dotsHtml}</div>
+          <div class="diff-name">${d.name}</div>
+          <div class="diff-desc">${d.desc}</div>
+        </div>
+      `;
+    }).join('');
+
     overlayCard.innerHTML = `
       <svg class="overlay-mark" viewBox="0 0 30 42">
         <path d="M15 41 C15 41 3 24.5 3 15 C3 7.2 8.6 1 15 1 C21.4 1 27 7.2 27 15 C27 24.5 15 41 15 41 Z"
@@ -1254,11 +1403,22 @@ const LOCATIONS = [
         <circle cx="15" cy="15" r="5.5" fill="#fff5ea"/>
       </svg>
       <div class="overlay-title">Where'd you<br>land<span class="q">?</span></div>
-      <div class="overlay-sub">You'll get ${TOTAL_ROUNDS} famous places, one at a time. Click the world map where you think each one is \u2014 the closer your pin, the more points you score. Up to 1,000 per round.</div>
+      <div class="overlay-sub">You'll get ${TOTAL_ROUNDS} places, one at a time, and 60 seconds per round to find each one. Click the world map where you think it is \u2014 the closer your pin, the more points you score. Up to 1,000 per round.</div>
+      <div class="diff-grid" id="diffGrid">${diffCardsHtml}</div>
       <button class="btn btn-primary" id="startBtn">Start game</button>
     `;
     overlay.classList.remove('hidden');
-    document.getElementById('startBtn').addEventListener('click', startGame);
+
+    const diffGrid = document.getElementById('diffGrid');
+    diffGrid.querySelectorAll('.diff-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        pickedDiff = card.getAttribute('data-diff');
+        diffGrid.querySelectorAll('.diff-card').forEach(c=> c.classList.remove('selected'));
+        card.classList.add('selected');
+      });
+    });
+
+    document.getElementById('startBtn').addEventListener('click', ()=> startGame(pickedDiff));
   }
 
   // ---------- pan & pinch-zoom (pointer events) ----------
@@ -1318,6 +1478,7 @@ const LOCATIONS = [
       if(zoomScale > MIN_SCALE){
         const rect = getMapRenderRect();
         if(rect.renderW > 0){
+          if(panMoved) svg.classList.add('dragging');
           const unitsPerPixel = VB_W / rect.renderW;
           zoomTx = singlePointerStart.tx + dx * unitsPerPixel;
           zoomTy = singlePointerStart.ty + dy * unitsPerPixel;
@@ -1331,6 +1492,7 @@ const LOCATIONS = [
 
   function onPointerUp(evt){
     activePointers.delete(evt.pointerId);
+    svg.classList.remove('dragging');
     if(activePointers.size < 2){ pinchStartDist = null; }
     if(activePointers.size === 0){ singlePointerStart = null; }
     else if(activePointers.size === 1){
@@ -1340,10 +1502,28 @@ const LOCATIONS = [
     }
   }
 
+  // Plain scroll/two-finger trackpad swipe pans the map when zoomed in (feels like
+  // Google Maps); holding Ctrl (or a trackpad pinch, which browsers report as a
+  // ctrlKey wheel event) zooms instead. When not zoomed in, any scroll zooms.
   function onWheel(evt){
     evt.preventDefault();
     const svgP = svgPointFromClientEvent(evt);
     if(!svgP) return;
+
+    if(!evt.ctrlKey && zoomScale > MIN_SCALE){
+      const rect = getMapRenderRect();
+      if(rect.renderW > 0 && rect.renderH > 0){
+        const unitsPerPixelX = VB_W / rect.renderW;
+        const unitsPerPixelY = VB_H / rect.renderH;
+        zoomTx -= evt.deltaX * unitsPerPixelX;
+        zoomTy -= evt.deltaY * unitsPerPixelY;
+        clampPan();
+        applyZoomTransform();
+        repositionAllMarkers();
+      }
+      return;
+    }
+
     const factor = evt.deltaY < 0 ? 1.18 : 1/1.18;
     zoomAt(svgP, factor);
   }
